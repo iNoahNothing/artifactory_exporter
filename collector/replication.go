@@ -19,6 +19,12 @@ func (e *Exporter) exportReplications(ch chan<- prometheus.Metric) error {
 		level.Debug(e.logger).Log("msg", "No replications stats found")
 		return nil
 	}
+	nodeId, err := e.client.GetNodeId()
+	if err != nil {
+		level.Error(e.logger).Log("msg", "Couldn't reach Artifactory", "err", err)
+		e.totalAPIErrors.Inc()
+		return nil
+	}
 	for _, replication := range replications {
 		for metricName, metric := range replicationMetrics {
 			switch metricName {
@@ -29,7 +35,7 @@ func (e *Exporter) exportReplications(ch chan<- prometheus.Metric) error {
 				rURL := strings.ToLower(replication.URL)
 				cronExp := replication.CronExp
 				level.Debug(e.logger).Log("msg", "Registering metric", "metric", metricName, "repo", replication.RepoKey, "type", rType, "url", rURL, "cron", cronExp, "value", enabled)
-				ch <- prometheus.MustNewConstMetric(metric, prometheus.GaugeValue, enabled, repo, rType, rURL, cronExp)
+				ch <- prometheus.MustNewConstMetric(metric, prometheus.GaugeValue, enabled, repo, rType, rURL, cronExp, nodeId)
 			}
 		}
 	}

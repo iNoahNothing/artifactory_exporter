@@ -15,24 +15,28 @@ type APIErrors struct {
 	Errors interface{}
 }
 
-// FetchHTTP is a wrapper function for making all Get API calls
-func (c *Client) FetchHTTP(path string) ([]byte, error) {
-	fullPath := fmt.Sprintf("%s/api/%s", c.URI, path)
-	level.Debug(c.logger).Log("msg", "Fetching http", "path", fullPath)
-	req, err := http.NewRequest("GET", fullPath, nil)
+func (c *Client) makeRequest(method string, path string, body *bytes.Buffer) (*http.Response, error) {
+	req, err := http.NewRequest(method, path, body)
 	if err != nil {
 		level.Error(c.logger).Log("msg", "There was an error creating request", "err", err.Error())
 		return nil, err
 	}
 	switch c.authMethod {
-	case "userPass":
+	case "userpass":
 		req.SetBasicAuth(c.cred.Username, c.cred.Password)
 	case "accessToken":
 		req.Header.Add("Authorization", "Bearer "+c.cred.AccessToken)
 	default:
-		return nil, fmt.Errorf("Artifactory Auth method is not supported")
+		return nil, fmt.Errorf("Artifactory Auth (%s) method is not supported", c.authMethod)
 	}
-	resp, err := c.client.Do(req)
+	return c.client.Do(req)
+}
+
+// FetchHTTP is a wrapper function for making all Get API calls
+func (c *Client) FetchHTTP(path string) ([]byte, error) {
+	fullPath := fmt.Sprintf("%s/api/%s", c.URI, path)
+	level.Debug(c.logger).Log("msg", "Fetching http", "path", fullPath)
+	resp, err := c.makeRequest("GET", fullPath, nil)
 	if err != nil {
 		level.Error(c.logger).Log("msg", "There was an error making API call", "endpoint", fullPath, "err", err.Error())
 		return nil, err
@@ -87,22 +91,7 @@ func (c *Client) FetchHTTP(path string) ([]byte, error) {
 func (c *Client) QueryAQL(query []byte) ([]byte, error) {
 	fullPath := fmt.Sprintf("%s/api/search/aql", c.URI)
 	level.Debug(c.logger).Log("msg", "Running AQL query", "path", fullPath)
-	req, err := http.NewRequest("POST", fullPath, bytes.NewBuffer(query))
-	req.Header = http.Header{"Content-Type": {"text/plain"}}
-	if err != nil {
-		level.Error(c.logger).Log("msg", "There was an error creating request", "err", err.Error())
-		return nil, err
-	}
-	switch c.authMethod {
-	case "userPass":
-		req.SetBasicAuth(c.cred.Username, c.cred.Password)
-	case "accessToken":
-		req.Header.Add("Authorization", "Bearer "+c.cred.AccessToken)
-	default:
-		return nil, fmt.Errorf("Artifactory Auth method is not supported")
-	}
-
-	resp, err := c.client.Do(req)
+	resp, err := c.makeRequest("POST", fullPath, bytes.NewBuffer(query))
 	if err != nil {
 		level.Error(c.logger).Log("msg", "There was an error making API call", "endpoint", fullPath, "err", err.Error())
 		return nil, err
@@ -130,4 +119,14 @@ func (c *Client) QueryAQL(query []byte) ([]byte, error) {
 		return nil, err
 	}
 	return bodyBytes, nil
+}
+
+func (c *Client) GetNodeId() (string, error) {
+	fullPath := fmt.Sprintf("%s/api/v1/system/readiness", c.URI)
+	resp, err := c.makeRequest("GET", fullPath, nil)
+	if err != nil {
+		level.Error(c.logger).Log("msg", "There was an error making API call", "endpoint", fullPath, "err", err.Error())
+		return "", err
+	}
+	return resp.Header.Get("x-artifactory-id"), nil
 }

@@ -14,13 +14,13 @@ type user struct {
 }
 
 // map[<realm>] <count>
-type realmUserCounts map[string] float64
+type realmUserCounts map[string]float64
 
 func (e *Exporter) countUsersPerRealm(users []artifactory.User) realmUserCounts {
 	level.Debug(e.logger).Log("msg", "Counting users")
-	usersPerRealm := realmUserCounts {}
+	usersPerRealm := realmUserCounts{}
 	for _, user := range users {
-		usersPerRealm[user.Realm]++;
+		usersPerRealm[user.Realm]++
 	}
 	return usersPerRealm
 }
@@ -30,6 +30,12 @@ func (e *Exporter) exportUsersCount(metricName string, metric *prometheus.Desc, 
 	users, err := e.client.FetchUsers()
 	if err != nil {
 		level.Error(e.logger).Log("msg", "Couldn't scrape Artifactory when fetching security/users", "err", err)
+		e.totalAPIErrors.Inc()
+		return err
+	}
+	nodeId, err := e.client.GetNodeId()
+	if err != nil {
+		level.Error(e.logger).Log("msg", "Couldn't reach Artifactory", "err", err)
 		e.totalAPIErrors.Inc()
 		return err
 	}
@@ -48,7 +54,7 @@ func (e *Exporter) exportUsersCount(metricName string, metric *prometheus.Desc, 
 	}
 	for realm, count := range usersPerRealm {
 		level.Debug(e.logger).Log("msg", "Registering metric", "metric", metricName, "realm", realm, "value", count)
-		ch <- prometheus.MustNewConstMetric(metric, prometheus.GaugeValue, count, realm)
+		ch <- prometheus.MustNewConstMetric(metric, prometheus.GaugeValue, count, realm, nodeId)
 	}
 	return nil
 }
@@ -66,7 +72,13 @@ func (e *Exporter) exportGroups(metricName string, metric *prometheus.Desc, ch c
 		e.totalAPIErrors.Inc()
 		return err
 	}
+	nodeId, err := e.client.GetNodeId()
+	if err != nil {
+		level.Error(e.logger).Log("msg", "Couldn't reach Artifactory", "err", err)
+		e.totalAPIErrors.Inc()
+		return err
+	}
 	level.Debug(e.logger).Log("msg", "Registering metric", "metric", metricName, "value", float64(len(groups)))
-	ch <- prometheus.MustNewConstMetric(metric, prometheus.GaugeValue, float64(len(groups)))
+	ch <- prometheus.MustNewConstMetric(metric, prometheus.GaugeValue, float64(len(groups)), nodeId)
 	return nil
 }
