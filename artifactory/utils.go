@@ -15,6 +15,11 @@ type APIErrors struct {
 	Errors interface{}
 }
 
+type ApiResponse struct {
+	Body   []byte
+	NodeId string
+}
+
 func (c *Client) makeRequest(method string, path string, body *bytes.Buffer) (*http.Response, error) {
 	req, err := http.NewRequest(method, path, body)
 	if err != nil {
@@ -33,7 +38,8 @@ func (c *Client) makeRequest(method string, path string, body *bytes.Buffer) (*h
 }
 
 // FetchHTTP is a wrapper function for making all Get API calls
-func (c *Client) FetchHTTP(path string) ([]byte, error) {
+func (c *Client) FetchHTTP(path string) (*ApiResponse, error) {
+	response := &ApiResponse{}
 	fullPath := fmt.Sprintf("%s/api/%s", c.URI, path)
 	level.Debug(c.logger).Log("msg", "Fetching http", "path", fullPath)
 	resp, err := c.makeRequest("GET", fullPath, nil)
@@ -41,6 +47,7 @@ func (c *Client) FetchHTTP(path string) ([]byte, error) {
 		level.Error(c.logger).Log("msg", "There was an error making API call", "endpoint", fullPath, "err", err.Error())
 		return nil, err
 	}
+	response.NodeId = resp.Header.Get("x-artifactory-node-id")
 	defer resp.Body.Close()
 
 	if resp.StatusCode == 404 {
@@ -83,12 +90,14 @@ func (c *Client) FetchHTTP(path string) ([]byte, error) {
 		level.Error(c.logger).Log("msg", "There was an error reading response body", "err", err.Error())
 		return nil, err
 	}
+	response.Body = bodyBytes
 
-	return bodyBytes, nil
+	return response, nil
 }
 
 // QueryAQL is a wrapper function for making an query to AQL endpoint
-func (c *Client) QueryAQL(query []byte) ([]byte, error) {
+func (c *Client) QueryAQL(query []byte) (*ApiResponse, error) {
+	response := &ApiResponse{}
 	fullPath := fmt.Sprintf("%s/api/search/aql", c.URI)
 	level.Debug(c.logger).Log("msg", "Running AQL query", "path", fullPath)
 	resp, err := c.makeRequest("POST", fullPath, bytes.NewBuffer(query))
@@ -96,6 +105,7 @@ func (c *Client) QueryAQL(query []byte) ([]byte, error) {
 		level.Error(c.logger).Log("msg", "There was an error making API call", "endpoint", fullPath, "err", err.Error())
 		return nil, err
 	}
+	response.NodeId = resp.Header.Get("x-artifactory-node-id")
 	defer resp.Body.Close()
 	if !(resp.StatusCode >= 200 && resp.StatusCode < 300) {
 		var apiErrors APIErrors
@@ -118,7 +128,8 @@ func (c *Client) QueryAQL(query []byte) ([]byte, error) {
 		level.Error(c.logger).Log("msg", "There was an error reading response body", "err", err.Error())
 		return nil, err
 	}
-	return bodyBytes, nil
+	response.Body = bodyBytes
+	return response, nil
 }
 
 func (c *Client) GetNodeId() (string, error) {

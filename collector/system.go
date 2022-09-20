@@ -10,7 +10,7 @@ import (
 )
 
 func (e *Exporter) exportSystem(license artifactory.LicenseInfo, ch chan<- prometheus.Metric) error {
-	healthy, err := e.client.FetchHealth()
+	health, err := e.client.FetchHealth()
 	if err != nil {
 		level.Error(e.logger).Log("msg", "Couldn't scrape Artifactory when fetching system/ping", "err", err)
 		e.totalAPIErrors.Inc()
@@ -22,20 +22,14 @@ func (e *Exporter) exportSystem(license artifactory.LicenseInfo, ch chan<- prome
 		e.totalAPIErrors.Inc()
 		return err
 	}
-	nodeId, err := e.client.GetNodeId()
-	if err != nil {
-		level.Error(e.logger).Log("msg", "Couldn't reach Artifactory", "err", err)
-		e.totalAPIErrors.Inc()
-		return err
-	}
 
 	licenseType := strings.ToLower(license.Type)
 	for metricName, metric := range systemMetrics {
 		switch metricName {
 		case "healthy":
-			ch <- prometheus.MustNewConstMetric(metric, prometheus.GaugeValue, b2f(healthy), nodeId)
+			ch <- prometheus.MustNewConstMetric(metric, prometheus.GaugeValue, b2f(health.Healthy), health.NodeId)
 		case "version":
-			ch <- prometheus.MustNewConstMetric(metric, prometheus.GaugeValue, 1, buildInfo.Version, buildInfo.Revision, nodeId)
+			ch <- prometheus.MustNewConstMetric(metric, prometheus.GaugeValue, 1, buildInfo.Version, buildInfo.Revision, buildInfo.NodeId)
 		case "license":
 			var validThrough float64
 			timeNow := float64(time.Now().Unix())
@@ -50,7 +44,7 @@ func (e *Exporter) exportSystem(license artifactory.LicenseInfo, ch chan<- prome
 					validThrough = float64(validThroughTime.Unix())
 				}
 			}
-			ch <- prometheus.MustNewConstMetric(metric, prometheus.GaugeValue, validThrough-timeNow, licenseType, license.LicensedTo, license.ValidThrough, nodeId)
+			ch <- prometheus.MustNewConstMetric(metric, prometheus.GaugeValue, validThrough-timeNow, licenseType, license.LicensedTo, license.ValidThrough, license.NodeId)
 		}
 	}
 	return nil

@@ -33,15 +33,8 @@ func (e *Exporter) exportUsersCount(metricName string, metric *prometheus.Desc, 
 		e.totalAPIErrors.Inc()
 		return err
 	}
-	nodeId, err := e.client.GetNodeId()
-	if err != nil {
-		level.Error(e.logger).Log("msg", "Couldn't reach Artifactory", "err", err)
-		e.totalAPIErrors.Inc()
-		return err
-	}
 
-	usersPerRealm := e.countUsersPerRealm(users)
-
+	usersPerRealm := e.countUsersPerRealm(users.Users)
 	totalUserCount := 0
 	for _, count := range usersPerRealm {
 		totalUserCount += int(count)
@@ -54,7 +47,7 @@ func (e *Exporter) exportUsersCount(metricName string, metric *prometheus.Desc, 
 	}
 	for realm, count := range usersPerRealm {
 		level.Debug(e.logger).Log("msg", "Registering metric", "metric", metricName, "realm", realm, "value", count)
-		ch <- prometheus.MustNewConstMetric(metric, prometheus.GaugeValue, count, realm, nodeId)
+		ch <- prometheus.MustNewConstMetric(metric, prometheus.GaugeValue, count, realm, users.NodeId)
 	}
 	return nil
 }
@@ -72,13 +65,8 @@ func (e *Exporter) exportGroups(metricName string, metric *prometheus.Desc, ch c
 		e.totalAPIErrors.Inc()
 		return err
 	}
-	nodeId, err := e.client.GetNodeId()
-	if err != nil {
-		level.Error(e.logger).Log("msg", "Couldn't reach Artifactory", "err", err)
-		e.totalAPIErrors.Inc()
-		return err
-	}
-	level.Debug(e.logger).Log("msg", "Registering metric", "metric", metricName, "value", float64(len(groups)))
-	ch <- prometheus.MustNewConstMetric(metric, prometheus.GaugeValue, float64(len(groups)), nodeId)
+
+	level.Debug(e.logger).Log("msg", "Registering metric", "metric", metricName, "value", float64(len(groups.Groups)))
+	ch <- prometheus.MustNewConstMetric(metric, prometheus.GaugeValue, float64(len(groups.Groups)), groups.NodeId)
 	return nil
 }
