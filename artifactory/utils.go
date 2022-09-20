@@ -20,8 +20,8 @@ type ApiResponse struct {
 	NodeId string
 }
 
-func (c *Client) makeRequest(method string, path string, body *bytes.Buffer) (*http.Response, error) {
-	req, err := http.NewRequest(method, path, body)
+func (c *Client) makeRequest(method string, path string, body []byte) (*http.Response, error) {
+	req, err := http.NewRequest(method, path, bytes.NewBuffer(body))
 	if err != nil {
 		level.Error(c.logger).Log("msg", "There was an error creating request", "err", err.Error())
 		return nil, err
@@ -100,7 +100,7 @@ func (c *Client) QueryAQL(query []byte) (*ApiResponse, error) {
 	response := &ApiResponse{}
 	fullPath := fmt.Sprintf("%s/api/search/aql", c.URI)
 	level.Debug(c.logger).Log("msg", "Running AQL query", "path", fullPath)
-	resp, err := c.makeRequest("POST", fullPath, bytes.NewBuffer(query))
+	resp, err := c.makeRequest("POST", fullPath, query)
 	if err != nil {
 		level.Error(c.logger).Log("msg", "There was an error making API call", "endpoint", fullPath, "err", err.Error())
 		return nil, err
