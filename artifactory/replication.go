@@ -29,7 +29,7 @@ type Replications struct {
 
 // FetchReplications makes the API call to replication endpoint and returns []Replication
 func (c *Client) FetchReplications() (Replications, error) {
-	replications := Replications{}
+	var replications Replications
 	level.Debug(c.logger).Log("msg", "Fetching replications stats")
 	resp, err := c.FetchHTTP(replicationEndpoint)
 	if err != nil {

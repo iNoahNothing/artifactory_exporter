@@ -23,7 +23,7 @@ type Users struct {
 
 // FetchUsers makes the API call to users endpoint and returns []User
 func (c *Client) FetchUsers() (Users, error) {
-	users := Users{}
+	var users Users
 	level.Debug(c.logger).Log("msg", "Fetching users stats")
 	resp, err := c.FetchHTTP(usersEndpoint)
 	if err != nil {
@@ -52,7 +52,7 @@ type Groups struct {
 
 // FetchGroups makes the API call to groups endpoint and returns []Group
 func (c *Client) FetchGroups() (Groups, error) {
-	groups := Groups{}
+	var groups Groups
 	level.Debug(c.logger).Log("msg", "Fetching groups stats")
 	resp, err := c.FetchHTTP(groupsEndpoint)
 	if err != nil {

@@ -27,7 +27,7 @@ func (c *Client) makeRequest(method string, path string, body []byte) (*http.Res
 		return nil, err
 	}
 	switch c.authMethod {
-	case "userpass":
+	case "userPass":
 		req.SetBasicAuth(c.cred.Username, c.cred.Password)
 	case "accessToken":
 		req.Header.Add("Authorization", "Bearer "+c.cred.AccessToken)
@@ -39,7 +39,7 @@ func (c *Client) makeRequest(method string, path string, body []byte) (*http.Res
 
 // FetchHTTP is a wrapper function for making all Get API calls
 func (c *Client) FetchHTTP(path string) (*ApiResponse, error) {
-	response := &ApiResponse{}
+	var response ApiResponse
 	fullPath := fmt.Sprintf("%s/api/%s", c.URI, path)
 	level.Debug(c.logger).Log("msg", "Fetching http", "path", fullPath)
 	resp, err := c.makeRequest("GET", fullPath, nil)
@@ -92,12 +92,12 @@ func (c *Client) FetchHTTP(path string) (*ApiResponse, error) {
 	}
 	response.Body = bodyBytes
 
-	return response, nil
+	return &response, nil
 }
 
 // QueryAQL is a wrapper function for making an query to AQL endpoint
 func (c *Client) QueryAQL(query []byte) (*ApiResponse, error) {
-	response := &ApiResponse{}
+	var response ApiResponse
 	fullPath := fmt.Sprintf("%s/api/search/aql", c.URI)
 	level.Debug(c.logger).Log("msg", "Running AQL query", "path", fullPath)
 	resp, err := c.makeRequest("POST", fullPath, query)
@@ -129,15 +129,5 @@ func (c *Client) QueryAQL(query []byte) (*ApiResponse, error) {
 		return nil, err
 	}
 	response.Body = bodyBytes
-	return response, nil
-}
-
-func (c *Client) GetNodeId() (string, error) {
-	fullPath := fmt.Sprintf("%s/api/v1/system/readiness", c.URI)
-	resp, err := c.makeRequest("GET", fullPath, nil)
-	if err != nil {
-		level.Error(c.logger).Log("msg", "There was an error making API call", "endpoint", fullPath, "err", err.Error())
-		return "", err
-	}
-	return resp.Header.Get("x-artifactory-id"), nil
+	return &response, nil
 }
