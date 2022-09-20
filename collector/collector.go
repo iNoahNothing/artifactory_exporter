@@ -31,7 +31,7 @@ var (
 
 	securityMetrics = metrics{
 		"users":  newMetric("users", "security", "Number of Artifactory users for each realm.", append([]string{"realm"}, defaultLabelNames...)),
-		"groups": newMetric("groups", "security", "Number of Artifactory groups", nil),
+		"groups": newMetric("groups", "security", "Number of Artifactory groups", defaultLabelNames),
 	}
 
 	storageMetrics = metrics{
@@ -50,7 +50,7 @@ var (
 	}
 
 	systemMetrics = metrics{
-		"healthy": newMetric("healthy", "system", "Is Artifactory working properly (1 = healthy).", nil),
+		"healthy": newMetric("healthy", "system", "Is Artifactory working properly (1 = healthy).", defaultLabelNames),
 		"version": newMetric("version", "system", "Version and revision of Artifactory as labels.", append([]string{"version", "revision"}, defaultLabelNames...)),
 		"license": newMetric("license", "system", "License type and expiry as labels, seconds to expiration as value", append([]string{"type", "licensed_to", "expires"}, defaultLabelNames...)),
 	}

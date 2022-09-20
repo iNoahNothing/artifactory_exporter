@@ -52,7 +52,7 @@ func (e *Exporter) exportFilestore(metricName string, metric *prometheus.Desc, s
 		return
 	}
 	level.Debug(e.logger).Log("msg", "Registering metric", "metric", metricName, "value", value)
-	ch <- prometheus.MustNewConstMetric(metric, prometheus.GaugeValue, value, nodeId)
+	ch <- prometheus.MustNewConstMetric(metric, prometheus.GaugeValue, value, fileStoreType, fileStoreDir, nodeId)
 }
 
 type repoSummary struct {
